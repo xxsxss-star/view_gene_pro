@@ -2,3 +2,21 @@
 *.iml
 .DS_Store
 Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/coverage/
+frontend/*.tsbuildinfo
+frontend/.env*
+!frontend/.env.example
+
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/uploads/
+
+# Local configuration and data
+.env
+uploads/
+mysql-data/
