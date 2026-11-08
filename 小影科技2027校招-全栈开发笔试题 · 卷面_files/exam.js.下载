@@ -1,0 +1,386 @@
+const root = document.querySelector('[data-exam]');
+if (root) {
+  const token = root.dataset.token;
+  const ends = Number(root.dataset.ends);
+  const timer = root.querySelector('[data-timer]');
+  const progress = root.querySelector('[data-progress]');
+  const saveState = root.querySelector('[data-save]');
+  const form = root.querySelector('form');
+  const submitButton = form.querySelector('[type="submit"]');
+  const submitLabel = submitButton.textContent;
+  const questions = [...root.querySelectorAll('.q')];
+  const saveTimers = new Map();
+  const idleFileText = new Map();
+  let uploads = Promise.resolve();
+  let uploadFailed = false;
+  let closed = false;
+  let submitLock = false;
+  let submitArmed = false;
+  let ignoreSubmitUntil = 0;
+  let submitTimer = 0;
+  const SUBMIT_DEBOUNCE_MS = 400;
+  const SUBMIT_THROTTLE_MS = 1000;
+
+  const format = (ms) => {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const pad = (value) => String(value).padStart(2, '0');
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const clock = `${pad(hours)}时${pad(minutes)}分${pad(seconds)}秒`;
+    return days > 0 ? `${days}天${clock}` : clock;
+  };
+
+  const isAnswered = (question) => {
+    if (question.dataset.type === 'project') {
+      const note = question.querySelector('textarea');
+      const box = question.querySelector('[data-file]');
+      const input = question.querySelector('[data-project-file]');
+      const listed = question.querySelector('[data-file-list]')?.children.length;
+      return Boolean(note?.value.trim()) || box?.dataset.uploaded === '1' || listed > 0 || Boolean(input?.files?.length);
+    }
+    const text = question.querySelector('textarea');
+    if (text) return text.value.trim().length > 0;
+    return Boolean(question.querySelector('input:checked'));
+  };
+
+  const setMeter = (question, ratio) => {
+    const meter = question.querySelector('[data-meter]');
+    const fill = question.querySelector('[data-meter-fill]');
+    if (!meter || !fill) return;
+    meter.classList.remove('is-saving');
+    meter.removeAttribute('aria-busy');
+    if (ratio == null) {
+      meter.hidden = true;
+      meter.setAttribute('aria-valuenow', '0');
+      fill.style.width = '0';
+      return;
+    }
+    meter.hidden = false;
+    if (ratio === 'saving') {
+      meter.classList.add('is-saving');
+      meter.setAttribute('aria-busy', 'true');
+      meter.removeAttribute('aria-valuenow');
+      fill.style.width = '';
+      return;
+    }
+    const percent = Math.max(0, Math.min(99, Math.round(ratio * 100)));
+    meter.setAttribute('aria-valuenow', String(percent));
+    fill.style.width = `${percent}%`;
+  };
+
+  const postFile = (url, body, onProgress) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    let sent = false;
+    const markSent = () => {
+      if (sent) return;
+      sent = true;
+      onProgress({ phase: 'save' });
+    };
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !event.total) return;
+      if (event.loaded >= event.total) {
+        markSent();
+        return;
+      }
+      onProgress({ phase: 'upload', ratio: event.loaded / event.total });
+    };
+    xhr.upload.onload = markSent;
+    xhr.onload = () => {
+      let payload = {};
+      try { payload = JSON.parse(xhr.responseText); } catch { payload = {}; }
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, payload });
+    };
+    xhr.onerror = () => reject(new Error('网络中断'));
+    xhr.send(body);
+  });
+
+  const refreshProgress = () => {
+    const done = questions.filter((question) => {
+      const answered = isAnswered(question);
+      question.classList.toggle('is-done', answered);
+      return answered;
+    }).length;
+    progress.textContent = `已答 ${done} / ${questions.length}`;
+    const fill = root.querySelector('[data-progress-fill]');
+    if (fill) fill.style.width = `${questions.length ? Math.round((done / questions.length) * 100) : 0}%`;
+  };
+
+  const setSave = (kind, text) => {
+    saveState.classList.toggle('is-ok', kind === 'ok');
+    saveState.classList.toggle('is-bad', kind === 'bad');
+    saveState.textContent = text;
+  };
+
+  const markSave = (ok) => {
+    setSave(ok ? 'ok' : 'bad', ok ? '已保存' : '未能保存，交卷时仍会提交已填写的内容');
+  };
+
+  const setSubmitLoading = (loading) => {
+    submitButton.disabled = loading;
+    submitButton.classList.toggle('is-loading', loading);
+    submitButton.setAttribute('aria-busy', loading ? 'true' : 'false');
+    submitButton.replaceChildren();
+    if (!loading) {
+      submitButton.textContent = submitLabel;
+      return;
+    }
+    const spin = document.createElement('span');
+    spin.className = 'spinner';
+    spin.setAttribute('aria-hidden', 'true');
+    submitButton.append(spin, document.createTextNode('交卷中'));
+  };
+
+  const setUploadLoading = (question, loading, text, lock = true) => {
+    const box = question.querySelector('[data-file]');
+    const input = question.querySelector('[data-project-file]');
+    const label = question.querySelector('[data-file-name]');
+    box.classList.toggle('is-loading', loading);
+    box.setAttribute('aria-busy', loading ? 'true' : 'false');
+    input.disabled = loading && lock;
+    question.querySelectorAll('[data-remove-file]').forEach((button) => {
+      button.disabled = loading;
+    });
+    label.replaceChildren();
+    if (loading) {
+      const spin = document.createElement('span');
+      spin.className = 'spinner';
+      spin.setAttribute('aria-hidden', 'true');
+      label.append(spin);
+    }
+    label.append(document.createTextNode(text));
+  };
+
+  const send = (questionId, value) => {
+    setSave('', '保存中');
+    return fetch(`/t/${token}/answers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId, value }),
+    }).then((response) => markSave(response.ok)).catch(() => markSave(false));
+  };
+
+  const renderFiles = (question, files) => {
+    const list = question.querySelector('[data-file-list]');
+    const box = question.querySelector('[data-file]');
+    list.replaceChildren();
+    for (const file of files) {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = file.name || '附件';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.removeFile = file.id;
+      button.textContent = '移除';
+      item.append(name, button);
+      list.append(item);
+    }
+    box.dataset.uploaded = files.length ? '1' : '0';
+  };
+
+  const uploadFile = async (question, file, index, total) => {
+    const box = question.querySelector('[data-file]');
+    const previous = box.dataset.uploaded === '1';
+    const name = file.name || '附件';
+    const head = total > 1 ? `${index}/${total} ${name}` : name;
+    setUploadLoading(question, true, `正在上传 ${head} · 0%`, false);
+    setMeter(question, 0);
+    setSave('', '上传中');
+    const body = new FormData();
+    body.append('questionId', question.dataset.question);
+    body.append('file', file);
+    try {
+      const { ok, payload } = await postFile(`/t/${token}/files`, body, (event) => {
+        if (event.phase === 'save') {
+          setMeter(question, 'saving');
+          setUploadLoading(question, true, `正在保存 ${head}`, false);
+          return;
+        }
+        const percent = Math.min(99, Math.round(event.ratio * 100));
+        setMeter(question, event.ratio);
+        setUploadLoading(question, true, `正在上传 ${head} · ${percent}%`, false);
+      });
+      if (!ok || !payload.ok) {
+        uploadFailed = true;
+        setMeter(question, null);
+        setUploadLoading(question, false, payload.message || '上传失败，请重新选择文件');
+        if (previous) box.dataset.uploaded = '1';
+        markSave(false);
+        return;
+      }
+      renderFiles(question, payload.files || []);
+      setMeter(question, null);
+      setUploadLoading(question, false, idleFileText.get(question) || '已上传');
+      markSave(true);
+      refreshProgress();
+    } catch {
+      uploadFailed = true;
+      setMeter(question, null);
+      setUploadLoading(question, false, '上传失败，请重新选择文件');
+      if (previous) box.dataset.uploaded = '1';
+      markSave(false);
+    }
+  };
+
+  const removeUploaded = async (question, fileId, button) => {
+    button.disabled = true;
+    setSave('', '保存中');
+    try {
+      const response = await fetch(`/t/${token}/files/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: question.dataset.question, fileId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        button.disabled = false;
+        setSave('bad', payload.message || '移除失败');
+        return;
+      }
+      renderFiles(question, payload.files || []);
+      markSave(true);
+      refreshProgress();
+    } catch {
+      button.disabled = false;
+      setSave('bad', '移除失败');
+    }
+  };
+
+  const flushUploads = () => uploads;
+
+  const watchText = (question, text) => {
+    text.addEventListener('input', () => {
+      refreshProgress();
+      const id = question.dataset.question;
+      clearTimeout(saveTimers.get(id));
+      saveTimers.set(id, setTimeout(() => send(id, text.value), 400));
+    });
+  };
+
+  questions.forEach((question) => {
+    const text = question.querySelector('textarea');
+    const file = question.querySelector('[data-project-file]');
+    if (question.dataset.type === 'project') {
+      const label = question.querySelector('[data-file-name]');
+      if (label) idleFileText.set(question, label.textContent);
+      if (text) watchText(question, text);
+      file?.addEventListener('change', () => {
+        const selected = [...(file.files || [])];
+        file.value = '';
+        if (!selected.length) return;
+        selected.forEach((item, index) => {
+          uploads = uploads.then(() => uploadFile(question, item, index + 1, selected.length));
+        });
+        refreshProgress();
+      });
+      return;
+    }
+    if (text) {
+      watchText(question, text);
+      return;
+    }
+    question.addEventListener('change', () => {
+      refreshProgress();
+      const id = question.dataset.question;
+      const value = [...question.querySelectorAll('input:checked')].map((input) => input.value);
+      clearTimeout(saveTimers.get(id));
+      saveTimers.set(id, setTimeout(() => send(id, value), 300));
+    });
+  });
+  form.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-remove-file]');
+    if (!button || closed) return;
+    event.preventDefault();
+    const question = button.closest('.q');
+    if (!question) return;
+    removeUploaded(question, button.dataset.removeFile, button);
+  });
+  refreshProgress();
+
+  const tick = () => {
+    if (!Number.isFinite(ends)) return;
+    const left = ends - Date.now();
+    timer.textContent = format(Math.max(0, left));
+    timer.classList.toggle('is-long', left >= 24 * 60 * 60 * 1000);
+    timer.classList.toggle('danger', left < 60 * 1000);
+    if (left <= 0 && !closed) {
+      closed = true;
+      form.dataset.force = '1';
+      form.requestSubmit();
+    }
+  };
+  tick();
+  const clock = setInterval(tick, 250);
+  window.addEventListener('pagehide', () => clearInterval(clock));
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') navigator.sendBeacon(`/t/${token}/blur`);
+  });
+
+  const finishSubmit = (intent) => {
+    submitLock = true;
+    ignoreSubmitUntil = Date.now() + SUBMIT_THROTTLE_MS;
+    setSubmitLoading(true);
+    flushUploads().then(() => {
+      if (uploadFailed && form.dataset.force !== '1') {
+        uploadFailed = false;
+        submitLock = false;
+        setSubmitLoading(false);
+        setSave('bad', '有文件没有传上去。请重新选择后再交卷');
+        return;
+      }
+      root.querySelectorAll('[data-project-file]').forEach((input) => {
+        input.disabled = true;
+      });
+      let input = form.querySelector('input[name="close"]');
+      if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'close';
+        form.append(input);
+      }
+      input.value = intent;
+      form.dataset.sending = '1';
+      form.submit();
+    }).catch(() => {
+      submitLock = false;
+      form.dataset.sending = '';
+      setSubmitLoading(false);
+      setSave('bad', '交卷没有发出，请再试一次');
+    });
+  };
+
+  const beginSubmit = (force) => {
+    if (submitLock || form.dataset.sending === '1') return;
+    if (!force && Date.now() < ignoreSubmitUntil) return;
+    const unanswered = questions.length - questions.filter(isAnswered).length;
+    const message = unanswered ? `还有 ${unanswered} 题未作答。交卷后不能修改。` : '交卷后不能修改。';
+    if (!force && !window.confirm(message)) {
+      ignoreSubmitUntil = Date.now() + SUBMIT_THROTTLE_MS;
+      setSubmitLoading(false);
+      return;
+    }
+    finishSubmit(force ? 'timeout' : 'submit');
+  };
+
+  form.addEventListener('submit', (event) => {
+    if (form.dataset.sending === '1') return;
+    event.preventDefault();
+    const force = form.dataset.force === '1';
+    if (force) {
+      clearTimeout(submitTimer);
+      submitArmed = false;
+      beginSubmit(true);
+      return;
+    }
+    if (submitLock || submitArmed || Date.now() < ignoreSubmitUntil) return;
+    submitArmed = true;
+    setSubmitLoading(true);
+    submitTimer = setTimeout(() => {
+      submitArmed = false;
+      beginSubmit(false);
+    }, SUBMIT_DEBOUNCE_MS);
+  });
+}

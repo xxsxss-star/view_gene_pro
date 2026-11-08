@@ -1,0 +1,33 @@
+document.addEventListener('click', (event) => {
+  const image = event.target.closest?.('.rich-text img, .rich-surface img');
+  if (!image?.getAttribute('src') || image.closest('[contenteditable="true"]') || event.target.closest('.photo-view')) return;
+  event.preventDefault();
+  openStemPhoto(image.currentSrc || image.src, image.alt);
+});
+
+function openStemPhoto(src, alt) {
+  const view = ensurePhotoView();
+  const full = view.querySelector('img');
+  full.src = src;
+  full.alt = alt || '原图';
+  if (!view.open) view.showModal();
+}
+
+window.openStemPhoto = openStemPhoto;
+
+function ensurePhotoView() {
+  let view = document.querySelector('.photo-view');
+  if (view) return view;
+  view = document.createElement('dialog');
+  view.className = 'photo-view';
+  view.innerHTML = '<button type="button" data-close>关闭</button><img alt="">';
+  view.querySelector('[data-close]').addEventListener('click', () => view.close());
+  view.addEventListener('click', (event) => {
+    if (event.target === view || event.target === view.querySelector('img')) view.close();
+  });
+  view.addEventListener('close', () => {
+    view.querySelector('img').removeAttribute('src');
+  });
+  document.body.append(view);
+  return view;
+}
