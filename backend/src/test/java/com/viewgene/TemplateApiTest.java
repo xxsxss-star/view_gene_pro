@@ -3,6 +3,7 @@ package com.viewgene;
 import com.viewgene.domain.model.MaterialTemplate;
 import com.viewgene.domain.model.TemplateCategory;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
+import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TemplateApiTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean AppUserMapper appUserMapper;
+    @MockitoBean AssetMapper assetMapper;
     @MockitoBean TemplateCategoryMapper categoryMapper;
     @MockitoBean MaterialTemplateMapper templateMapper;
 

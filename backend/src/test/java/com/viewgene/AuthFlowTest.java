@@ -3,6 +3,7 @@ package com.viewgene;
 import com.viewgene.domain.model.AppUser;
 import com.viewgene.domain.model.UserStatus;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
+import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 import com.viewgene.infrastructure.security.JwtTokenService;
@@ -40,6 +41,7 @@ class AuthFlowTest {
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired JwtTokenService tokenService;
     @MockitoBean AppUserMapper appUserMapper;
+    @MockitoBean AssetMapper assetMapper;
     @MockitoBean TemplateCategoryMapper templateCategoryMapper;
     @MockitoBean MaterialTemplateMapper materialTemplateMapper;
 

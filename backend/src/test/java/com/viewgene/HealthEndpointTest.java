@@ -8,6 +8,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
+import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 
@@ -28,6 +29,9 @@ class HealthEndpointTest {
 
     @MockitoBean
     AppUserMapper appUserMapper;
+
+    @MockitoBean
+    AssetMapper assetMapper;
 
     @MockitoBean
     TemplateCategoryMapper templateCategoryMapper;

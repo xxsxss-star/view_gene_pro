@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.viewgene.infrastructure.persistence.mapper.AssetMapper">
+    <resultMap id="assetResult" type="com.viewgene.domain.model.Asset">
+        <constructor>
+            <idArg column="id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="original_name" javaType="java.lang.String"/>
+            <arg column="storage_key" javaType="java.lang.String"/>
+            <arg column="mime_type" javaType="java.lang.String"/>
+            <arg column="file_size_bytes" javaType="java.lang.Long"/>
+            <arg column="sha256" javaType="java.lang.String"/>
+            <arg column="status" javaType="com.viewgene.domain.model.AssetStatus"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO asset (
+            user_id, original_name, storage_key, mime_type,
+            file_size_bytes, sha256, status, created_at
+        ) VALUES (
+            #{userId}, #{originalName}, #{storageKey}, #{mimeType},
+            #{fileSizeBytes}, #{sha256}, #{status}, #{createdAt}
+        )
+    </insert>
+
+    <!-- 用户条件放进 SQL，避免先读出其他用户素材后再在 Java 中判断。 -->
+    <select id="findByIdAndUserId" resultMap="assetResult">
+        SELECT id, user_id, original_name, storage_key, mime_type,
+               file_size_bytes, sha256, status, created_at
+        FROM asset
+        WHERE id = #{id} AND user_id = #{userId} AND status = 'READY'
+    </select>
+</mapper>

@@ -63,10 +63,30 @@ button:disabled { opacity: .65; cursor: wait; }
 .requirements div { display: flex; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid #e1e6ef; }
 .requirements dt { color: #6b7588; }
 .requirements dd { margin: 0; font-weight: 700; text-align: right; }
+.upload-section { grid-column: 1 / -1; margin-top: 12px; padding-top: 32px; border-top: 1px solid #dce3ee; }
+.upload-section > h2 { margin: 0 0 8px; font-size: 1.7rem; }
+.upload-section > p { margin: 0 0 22px; color: #5c667a; }
+.upload-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.upload-slot { padding: 14px; border: 1px solid #d7dfeb; border-radius: 16px; background: #fff; }
+.upload-slot.status-success { border-color: #74b58a; }
+.upload-slot.status-failed { border-color: #e2a19b; }
+.slot-preview { position: relative; display: grid; place-items: center; overflow: hidden; aspect-ratio: 3 / 2; border-radius: 11px; background: #eef2f7; color: #7b8597; }
+.slot-preview img { width: 100%; height: 100%; object-fit: cover; }
+.uploading-label { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(23 32 51 / 62%); color: #fff; font-weight: 750; }
+.success-text, .slot-error { margin: 10px 0 0; font-size: .9rem; line-height: 1.5; }
+.success-text { color: #24713d; }
+.slot-error { color: #b42318; }
+.slot-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.slot-actions button, .file-button { margin: 0; padding: 8px 12px; border-radius: 9px; font-size: .9rem; }
+.file-button { display: inline-block; background: #3458db; color: #fff; font-weight: 700; cursor: pointer; }
+.file-button:has(input:disabled) { opacity: .65; cursor: wait; }
+.file-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ready-button { margin-top: 24px; }
 
 @media (max-width: 850px) {
   .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .template-detail { grid-template-columns: 1fr; gap: 24px; }
+  .upload-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-header { gap: 18px; }
   .app-header nav { display: none; }
 }
@@ -76,5 +96,6 @@ button:disabled { opacity: .65; cursor: wait; }
   .account span { display: none; }
   .content { padding: 36px 16px 60px; }
   .template-grid { grid-template-columns: 1fr; }
+  .upload-grid { grid-template-columns: 1fr; }
   .card-footer { align-items: flex-start; flex-direction: column; }
 }

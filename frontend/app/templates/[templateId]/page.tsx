@@ -9,6 +9,7 @@ import { AuthGuard } from "@/components/auth-guard";
 import { ApiClientError } from "@/lib/api/client";
 import { resolveApiAssetUrl } from "@/lib/api/config";
 import { getTemplate } from "@/lib/api/templates";
+import { UploadSlots } from "@/components/upload-slots";
 
 function readableMimeType(type: string): string {
   return type.replace("image/", "").toUpperCase();
@@ -62,8 +63,13 @@ export default function TemplateDetailPage() {
                   <div><dt>支持格式</dt><dd>{template.data.acceptedMimeTypes.map(readableMimeType).join("、")}</dd></div>
                   <div><dt>单张上限</dt><dd>{readableFileSize(template.data.maxFileSizeBytes)}</dd></div>
                 </dl>
-                <button type="button" disabled>上传功能将在下一阶段开放</button>
               </div>
+              <UploadSlots
+                templateId={template.data.id}
+                requiredImageCount={template.data.requiredImageCount}
+                acceptedMimeTypes={template.data.acceptedMimeTypes}
+                maxFileSizeBytes={template.data.maxFileSizeBytes}
+              />
             </article>
           )}
         </main>
