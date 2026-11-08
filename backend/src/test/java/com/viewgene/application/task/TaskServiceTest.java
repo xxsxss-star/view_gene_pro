@@ -37,13 +37,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class TaskServiceTest {
+class TaskCreationServiceTest {
     private final AuthenticatedUser user = new AuthenticatedUser(1L, "demo_user", "演示用户");
     private MaterialTemplateMapper templateMapper;
     private AssetMapper assetMapper;
     private ProductionTaskMapper taskMapper;
     private AssetStorage storage;
-    private TaskService service;
+    private TaskCreationService service;
     private MaterialTemplate template;
     private Asset first;
     private Asset second;
@@ -55,7 +55,7 @@ class TaskServiceTest {
         taskMapper = mock(ProductionTaskMapper.class);
         storage = mock(AssetStorage.class);
         Clock clock = Clock.fixed(Instant.parse("2026-11-08T10:30:00Z"), ZoneOffset.UTC);
-        service = new TaskService(templateMapper, assetMapper, taskMapper, storage, clock);
+        service = new TaskCreationService(templateMapper, assetMapper, taskMapper, storage, clock);
         template = template(2);
         first = asset(101L, 1L, "first.jpg", "one.jpg", "image/jpeg", 100L, AssetStatus.READY);
         second = asset(102L, 1L, "second.png", "two.png", "image/png", 200L, AssetStatus.READY);
@@ -72,7 +72,7 @@ class TaskServiceTest {
 
     @Test
     void createsQueuedTaskAndPreservesRequestedAssetOrder() {
-        CreatedTaskDto created = service.create(user,
+        CreatedTaskDto created = service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L, 102L)));
 
         assertThat(created.id()).isEqualTo(9001L);
@@ -87,48 +87,35 @@ class TaskServiceTest {
 
     @Test
     void createMethodDefinesOneTransactionForTaskAndAssociations() throws Exception {
-        Method create = TaskService.class.getMethod("create", AuthenticatedUser.class, CreateTaskRequest.class);
+        Method create = TaskCreationService.class.getMethod("createCommitted", AuthenticatedUser.class, CreateTaskRequest.class);
         assertThat(create.getAnnotation(Transactional.class)).isNotNull();
 
         when(taskMapper.insertAssets(eq(9001L), any())).thenReturn(0);
-        assertThatThrownBy(() -> service.create(user,
+        assertThatThrownBy(() -> service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L, 102L))))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void rejectsWrongCountDuplicatesMissingCrossUserAndMissingPhysicalFile() {
-        assertCode("INVALID_ASSET_COUNT", () -> service.create(user,
+        assertCode("INVALID_ASSET_COUNT", () -> service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L))));
-        assertCode("VALIDATION_ERROR", () -> service.create(user,
+        assertCode("VALIDATION_ERROR", () -> service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L, 101L))));
 
         when(assetMapper.findAllByIdsAndUserId(List.of(101L, 999L), 1L)).thenReturn(List.of(first));
-        assertCode("ASSET_NOT_FOUND", () -> service.create(user,
+        assertCode("ASSET_NOT_FOUND", () -> service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L, 999L))));
 
         when(storage.load("two.png")).thenReturn(new ByteArrayResource(new byte[0]) {
             @Override public boolean exists() { return false; }
         });
-        assertCode("ASSET_NOT_FOUND", () -> service.create(user,
+        assertCode("ASSET_NOT_FOUND", () -> service.createCommitted(user,
                 new CreateTaskRequest("travel-collage", List.of(101L, 102L))));
         verify(taskMapper, never()).insertAssets(anyLong(), any());
     }
 
     @Test
-    void queriesAlwaysIncludeCurrentUserAndDoNotWrite() {
-        TaskViewRecord record = new TaskViewRecord(9001L, "travel-collage", "双图旅行拼贴", "/cover.svg",
-                TaskStatus.QUEUED, null, null, null, null, LocalDateTime.now(), null, null, LocalDateTime.now());
-        when(taskMapper.findAllByUserId(1L, TaskStatus.QUEUED)).thenReturn(List.of(record));
-        when(taskMapper.findByIdAndUserId(9001L, 1L)).thenReturn(Optional.of(record));
-
-        assertThat(service.list(user, "queued")).hasSize(1);
-        assertThat(service.detail(user, 9001L).id()).isEqualTo(9001L);
-        verify(taskMapper).findAllByUserId(1L, TaskStatus.QUEUED);
-        verify(taskMapper).findByIdAndUserId(9001L, 1L);
-        verify(taskMapper, never()).insert(any());
-    }
-
     private MaterialTemplate template(int count) {
         LocalDateTime now = LocalDateTime.now();
         return new MaterialTemplate("travel-collage", 1L, "双图旅行拼贴", "说明", "/cover.svg", "/result.svg",

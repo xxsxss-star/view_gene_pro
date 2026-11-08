@@ -26,7 +26,7 @@ export default function TasksPage() {
           <section className="page-heading">
             <p className="eyebrow">My Productions</p>
             <h1>我的制作</h1>
-            <p>阶段六只负责受理和查询，新建任务会稳定显示为“等待处理”。</p>
+            <p>任务由后台依次完成素材检查、模拟生成和结果整理；当前页面可手动刷新查看最新状态。</p>
           </section>
           {tasks.isPending && <p className="state-panel" role="status">正在加载任务…</p>}
           {tasks.isError && (

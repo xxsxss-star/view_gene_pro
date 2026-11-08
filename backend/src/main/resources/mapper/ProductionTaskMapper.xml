@@ -53,4 +53,45 @@
         JOIN material_template mt ON mt.id = pt.template_id
         WHERE pt.id = #{id} AND pt.user_id = #{userId}
     </select>
+
+    <select id="findExecutionById" resultType="com.viewgene.infrastructure.persistence.record.TaskExecutionRecord">
+        SELECT pt.id, mt.result_url
+        FROM production_task pt
+        JOIN material_template mt ON mt.id = pt.template_id
+        WHERE pt.id = #{id}
+    </select>
+
+    <!-- 所有状态写入都带当前状态/阶段条件，旧线程无法覆盖终态。 -->
+    <update id="start">
+        UPDATE production_task
+        SET status = 'PROCESSING', stage = #{stage}, started_at = #{now}, updated_at = #{now}, version = version + 1
+        WHERE id = #{id} AND status = 'QUEUED' AND stage IS NULL
+    </update>
+
+    <update id="advance">
+        UPDATE production_task
+        SET stage = #{nextStage}, updated_at = #{now}, version = version + 1
+        WHERE id = #{id} AND status = 'PROCESSING' AND stage = #{expectedStage}
+    </update>
+
+    <update id="succeed">
+        UPDATE production_task
+        SET status = 'SUCCEEDED', result_url = #{resultUrl}, failure_code = NULL, failure_reason = NULL,
+            completed_at = #{now}, updated_at = #{now}, version = version + 1
+        WHERE id = #{id} AND status = 'PROCESSING' AND stage = #{expectedStage}
+    </update>
+
+    <update id="failProcessing">
+        UPDATE production_task
+        SET status = 'FAILED', stage = #{stage}, failure_code = #{code}, failure_reason = #{reason},
+            completed_at = #{now}, updated_at = #{now}, version = version + 1
+        WHERE id = #{id} AND status = 'PROCESSING' AND stage = #{stage}
+    </update>
+
+    <update id="failQueued">
+        UPDATE production_task
+        SET status = 'FAILED', stage = NULL, failure_code = #{code}, failure_reason = #{reason},
+            completed_at = #{now}, updated_at = #{now}, version = version + 1
+        WHERE id = #{id} AND status = 'QUEUED' AND stage IS NULL
+    </update>
 </mapper>

@@ -1,6 +1,8 @@
 package com.viewgene.common.web;
 
 import com.viewgene.common.api.ErrorResponse;
+import com.viewgene.common.api.TaskQueueFullErrorResponse;
+import com.viewgene.application.task.TaskQueueFullException;
 import com.viewgene.common.api.FieldErrorDetail;
 import com.viewgene.common.exception.BusinessException;
 import jakarta.validation.ConstraintViolationException;
@@ -24,6 +26,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
         return ResponseEntity.status(exception.getStatus())
                 .body(ErrorResponse.of(exception.getCode(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(TaskQueueFullException.class)
+    public ResponseEntity<TaskQueueFullErrorResponse> handleTaskQueueFull(TaskQueueFullException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(TaskQueueFullErrorResponse.of(exception.getTaskId(), exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
