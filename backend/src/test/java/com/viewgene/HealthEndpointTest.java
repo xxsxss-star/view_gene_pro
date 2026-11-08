@@ -8,6 +8,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
+import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
+import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,6 +28,12 @@ class HealthEndpointTest {
 
     @MockitoBean
     AppUserMapper appUserMapper;
+
+    @MockitoBean
+    TemplateCategoryMapper templateCategoryMapper;
+
+    @MockitoBean
+    MaterialTemplateMapper materialTemplateMapper;
 
     @Test
     void healthEndpointIsPublicAndDoesNotExposeDetails() throws Exception {
