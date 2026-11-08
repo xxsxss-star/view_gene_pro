@@ -1,6 +1,6 @@
 # View Gene Pro
 
-图片素材制作网站，当前完成到多阶段实施方案的阶段 2（数据库与后端公共基础）。当前已具备工程骨架、核心表结构、种子数据、MyBatis 基础查询和统一响应/异常能力，但尚未开放登录、模板、上传或任务业务接口。
+图片素材制作网站，当前完成到多阶段实施方案的阶段 3（登录认证闭环）。当前已具备数据库预置用户登录、BCrypt 密码校验、JWT Bearer 认证、当前用户恢复、退出登录和前端路由保护；模板、上传和任务业务仍按后续阶段实施。
 
 ## 固定技术基线
 
@@ -46,6 +46,7 @@ $env:DB_URL='jdbc:mysql://localhost:3306/view_gene?useUnicode=true&characterEnco
 $env:DB_USERNAME='view_gene'
 $env:DB_PASSWORD='your-local-password'
 $env:JWT_SECRET='replace-with-at-least-32-random-characters'
+$env:JWT_EXPIRATION_SECONDS='28800'
 ```
 
 ## 前端
@@ -73,7 +74,15 @@ cd backend
 
 访问 `http://localhost:8080/actuator/health` 检查健康状态。应用启动时会连接 MySQL，并由 Flyway 自动执行尚未应用的迁移。
 
-首次连接空的 `view_gene` 数据库时，Flyway 会创建六张核心表并写入两个演示用户、两个分类和三个模板。演示用户为 `demo_user`、`demo_user_b`，开发演示密码均为 `demo123`；阶段 3 才会实现登录接口。
+首次连接空的 `view_gene` 数据库时，Flyway 会创建六张核心表并写入两个演示用户、两个分类和三个模板。演示用户为 `demo_user`、`demo_user_b`，开发演示密码均为 `demo123`。后端启动后可在 `http://localhost:3000/login` 登录。
+
+认证接口：
+
+- `POST /api/v1/auth/login`：用户名和密码登录。
+- `GET /api/v1/auth/me`：携带 `Authorization: Bearer <token>` 恢复当前用户。
+- `POST /api/v1/auth/logout`：返回 204，由前端清除令牌和用户级查询缓存。
+
+JWT 当前只提供 8 小时访问令牌，不提供刷新令牌或服务端撤销列表。因此退出登录只会清除本地令牌，已签发令牌在过期前理论上仍可使用；生产环境应评估 HttpOnly Secure Cookie/BFF、令牌撤销和更严格的密钥管理。
 
 如需显式运行本机 MySQL 集成测试，请先在当前 PowerShell 设置数据库环境变量，再执行：
 
@@ -88,6 +97,6 @@ $env:RUN_MYSQL_INTEGRATION_TESTS='true'
 
 ## 当前边界
 
-- 已完成：前后端工程入口、六张核心表、种子数据、原创演示素材、领域模型、MyBatis 基础查询、统一响应/异常、requestId 和 UTC 时间序列化。
-- 未完成：认证、业务 Controller、素材上传、任务及异步执行，按阶段 3 以后实施。
+- 已完成：阶段 1～3，包括工程入口、数据库公共基础、预置用户、BCrypt、JWT、认证 API、登录页、身份恢复、退出和受保护路由。
+- 未完成：模板业务 Controller、素材上传、任务及异步执行，按阶段 4 以后实施。
 - Docker Compose、前后端 Dockerfile 和 CI 暂缓；用户当前明确不准备 Docker，最终交付在阶段 10 补齐。
