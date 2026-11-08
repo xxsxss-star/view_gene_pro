@@ -5,6 +5,7 @@ import com.viewgene.domain.model.UserStatus;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
 import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
+import com.viewgene.infrastructure.persistence.mapper.ProductionTaskMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 import com.viewgene.infrastructure.security.JwtTokenService;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,7 @@ class AuthFlowTest {
     @MockitoBean AssetMapper assetMapper;
     @MockitoBean TemplateCategoryMapper templateCategoryMapper;
     @MockitoBean MaterialTemplateMapper materialTemplateMapper;
+    @MockitoBean ProductionTaskMapper productionTaskMapper;
 
     private AppUser activeUser;
 

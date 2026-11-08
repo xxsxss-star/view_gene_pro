@@ -4,6 +4,8 @@ import Image from "next/image";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { uploadAsset, UploadedAsset } from "@/lib/api/assets";
 import { ApiClientError } from "@/lib/api/client";
+import { createTask } from "@/lib/api/tasks";
+import { useRouter } from "next/navigation";
 
 type UploadStatus = "EMPTY" | "UPLOADING" | "SUCCESS" | "FAILED";
 
@@ -24,11 +26,14 @@ interface UploadSlotsProps {
 }
 
 export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes, maxFileSizeBytes }: UploadSlotsProps) {
+  const router = useRouter();
   const [slots, setSlots] = useState<UploadSlot[]>(() =>
     Array.from({ length: requiredImageCount }, (_, position) => ({ position, status: "EMPTY" })),
   );
   const slotsRef = useRef(slots);
   const requestVersions = useRef(Array.from({ length: requiredImageCount }, () => 0));
+  const [isCreatingTask, setCreatingTask] = useState(false);
+  const [taskError, setTaskError] = useState("");
 
   useEffect(() => { slotsRef.current = slots; }, [slots]);
 
@@ -85,6 +90,20 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
 
   const allSucceeded = slots.every((slot) => slot.status === "SUCCESS");
 
+  async function submitTask() {
+    if (!allSucceeded || isCreatingTask) return;
+    setCreatingTask(true);
+    setTaskError("");
+    try {
+      // slots 始终按 position 排列，因此 assetIds 会保持用户看到的上传位顺序。
+      const task = await createTask(templateId, slots.map((slot) => slot.asset!.id));
+      router.push(`/tasks?created=${task.id}`);
+    } catch (error) {
+      setTaskError(error instanceof ApiClientError ? error.message : "创建任务失败，请重试");
+      setCreatingTask(false);
+    }
+  }
+
   return (
     <section className="upload-section" aria-labelledby="upload-title">
       <h2 id="upload-title">上传图片</h2>
@@ -116,8 +135,10 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
           </article>
         ))}
       </div>
-      <button type="button" className="ready-button" disabled={!allSucceeded}>
-        {allSucceeded ? "素材已就绪（下一阶段创建任务）" : `请先完成 ${requiredImageCount} 张图片上传`}
+      {taskError && <p className="slot-error" role="alert">{taskError}</p>}
+      <button type="button" className="ready-button" disabled={!allSucceeded || isCreatingTask}
+              onClick={() => void submitTask()}>
+        {isCreatingTask ? "正在创建任务…" : allSucceeded ? "创建制作任务" : `请先完成 ${requiredImageCount} 张图片上传`}
       </button>
     </section>
   );

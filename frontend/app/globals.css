@@ -82,6 +82,14 @@ button:disabled { opacity: .65; cursor: wait; }
 .file-button:has(input:disabled) { opacity: .65; cursor: wait; }
 .file-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .ready-button { margin-top: 24px; }
+.task-list { display: grid; gap: 18px; margin-top: 32px; }
+.task-card { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; overflow: hidden; padding: 18px; border: 1px solid #dbe2ee; border-radius: 18px; background: #fff; box-shadow: 0 12px 30px rgb(25 45 80 / 7%); }
+.task-card > img { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 12px; object-fit: cover; background: #e9edf5; }
+.task-card h2 { margin: 8px 0; }
+.task-card p { margin: 6px 0 0; color: #5c667a; }
+.task-status { display: inline-block; padding: 4px 9px; border-radius: 999px; background: #eef2ff; color: #2747bd; font-size: .82rem; font-weight: 750; }
+.task-status.status-succeeded { background: #e9f7ed; color: #24713d; }
+.task-status.status-failed { background: #fff0ef; color: #b42318; }
 
 @media (max-width: 850px) {
   .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -97,5 +105,6 @@ button:disabled { opacity: .65; cursor: wait; }
   .content { padding: 36px 16px 60px; }
   .template-grid { grid-template-columns: 1fr; }
   .upload-grid { grid-template-columns: 1fr; }
+  .task-card { grid-template-columns: 1fr; }
   .card-footer { align-items: flex-start; flex-direction: column; }
 }

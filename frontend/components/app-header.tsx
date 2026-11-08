@@ -10,7 +10,7 @@ export function AppHeader() {
       <Link className="brand" href="/">View Gene Pro</Link>
       <nav aria-label="主导航">
         <Link href="/">模板</Link>
-        <a href="/tasks" aria-disabled="true" onClick={(event) => event.preventDefault()}>我的制作（即将开放）</a>
+        <Link href="/tasks">我的制作</Link>
       </nav>
       <div className="account">
         <span>{user?.displayName}</span>

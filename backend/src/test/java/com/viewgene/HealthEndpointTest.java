@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
 import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
+import com.viewgene.infrastructure.persistence.mapper.ProductionTaskMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,6 +39,9 @@ class HealthEndpointTest {
 
     @MockitoBean
     MaterialTemplateMapper materialTemplateMapper;
+
+    @MockitoBean
+    ProductionTaskMapper productionTaskMapper;
 
     @Test
     void healthEndpointIsPublicAndDoesNotExposeDetails() throws Exception {

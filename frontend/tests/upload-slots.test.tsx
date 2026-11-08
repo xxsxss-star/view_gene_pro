@@ -2,8 +2,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { UploadSlots } from "@/components/upload-slots";
 import { ApiClientError } from "@/lib/api/client";
 import * as assetApi from "@/lib/api/assets";
+import * as taskApi from "@/lib/api/tasks";
 
 vi.mock("@/lib/api/assets", () => ({ uploadAsset: vi.fn() }));
+vi.mock("@/lib/api/tasks", () => ({ createTask: vi.fn() }));
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const createObjectURL = vi.fn((file: File) => `blob:${file.name}`);
 const revokeObjectURL = vi.fn();
@@ -26,6 +31,8 @@ function png(name: string) {
 
 beforeEach(() => {
   vi.mocked(assetApi.uploadAsset).mockReset();
+  vi.mocked(taskApi.createTask).mockReset();
+  push.mockReset();
   createObjectURL.mockClear();
   revokeObjectURL.mockClear();
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
@@ -77,6 +84,34 @@ describe("UploadSlots", () => {
     renderSlots();
     fireEvent.change(screen.getByLabelText("选择第 1 张图片"), { target: { files: [png("one.png")] } });
     fireEvent.change(screen.getByLabelText("选择第 2 张图片"), { target: { files: [png("two.png")] } });
-    expect(await screen.findByRole("button", { name: "素材已就绪（下一阶段创建任务）" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "创建制作任务" })).toBeEnabled();
+  });
+
+  it("submits ordered asset ids once and redirects to the task list", async () => {
+    vi.mocked(assetApi.uploadAsset)
+      .mockResolvedValueOnce(asset(11, "one.png"))
+      .mockResolvedValueOnce(asset(22, "two.png"));
+    vi.mocked(taskApi.createTask).mockResolvedValue({
+      id: 9001, status: "QUEUED", stage: null, createdAt: "2026-11-08T00:00:00Z",
+    });
+    renderSlots();
+    fireEvent.change(screen.getByLabelText("选择第 1 张图片"), { target: { files: [png("one.png")] } });
+    fireEvent.change(screen.getByLabelText("选择第 2 张图片"), { target: { files: [png("two.png")] } });
+    fireEvent.click(await screen.findByRole("button", { name: "创建制作任务" }));
+    await waitFor(() => expect(taskApi.createTask).toHaveBeenCalledWith("travel-collage", [11, 22]));
+    expect(push).toHaveBeenCalledWith("/tasks?created=9001");
+  });
+
+  it("keeps uploaded assets available when task creation fails", async () => {
+    vi.mocked(assetApi.uploadAsset).mockResolvedValue(asset(33, "keep.png"));
+    vi.mocked(taskApi.createTask).mockRejectedValue(
+      new ApiClientError(409, "ASSET_NOT_READY", "素材暂不可用"),
+    );
+    renderSlots(1);
+    fireEvent.change(screen.getByLabelText("选择第 1 张图片"), { target: { files: [png("keep.png")] } });
+    fireEvent.click(await screen.findByRole("button", { name: "创建制作任务" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("素材暂不可用");
+    expect(screen.getByText("上传成功：keep.png")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "创建制作任务" })).toBeEnabled();
   });
 });

@@ -32,4 +32,15 @@
         FROM asset
         WHERE id = #{id} AND user_id = #{userId} AND status = 'READY'
     </select>
+
+    <select id="findAllByIdsAndUserId" resultMap="assetResult">
+        SELECT id, user_id, original_name, storage_key, mime_type,
+               file_size_bytes, sha256, status, created_at
+        FROM asset
+        WHERE user_id = #{userId}
+          AND id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">
+              #{id}
+          </foreach>
+    </select>
 </mapper>

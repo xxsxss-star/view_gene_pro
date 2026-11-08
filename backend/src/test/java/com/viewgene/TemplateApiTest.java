@@ -5,6 +5,7 @@ import com.viewgene.domain.model.TemplateCategory;
 import com.viewgene.infrastructure.persistence.mapper.AppUserMapper;
 import com.viewgene.infrastructure.persistence.mapper.AssetMapper;
 import com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper;
+import com.viewgene.infrastructure.persistence.mapper.ProductionTaskMapper;
 import com.viewgene.infrastructure.persistence.mapper.TemplateCategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class TemplateApiTest {
     @MockitoBean AssetMapper assetMapper;
     @MockitoBean TemplateCategoryMapper categoryMapper;
     @MockitoBean MaterialTemplateMapper templateMapper;
+    @MockitoBean ProductionTaskMapper productionTaskMapper;
 
     private TemplateCategory travel;
     private TemplateCategory social;
