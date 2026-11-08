@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.viewgene.infrastructure.persistence.mapper.AppUserMapper">
+    <resultMap id="appUserResult" type="com.viewgene.domain.model.AppUser">
+        <constructor>
+            <idArg column="id" javaType="java.lang.Long"/>
+            <arg column="username" javaType="java.lang.String"/>
+            <arg column="display_name" javaType="java.lang.String"/>
+            <arg column="password_hash" javaType="java.lang.String"/>
+            <arg column="status" javaType="com.viewgene.domain.model.UserStatus"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+            <arg column="updated_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="userColumns">id, username, display_name, password_hash, status, created_at, updated_at</sql>
+
+    <select id="findById" resultMap="appUserResult">
+        SELECT <include refid="userColumns"/> FROM app_user WHERE id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="appUserResult">
+        SELECT <include refid="userColumns"/> FROM app_user WHERE username = #{username}
+    </select>
+</mapper>

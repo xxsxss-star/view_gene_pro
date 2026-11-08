@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.viewgene.infrastructure.persistence.mapper.MaterialTemplateMapper">
+    <resultMap id="templateResult" type="com.viewgene.domain.model.MaterialTemplate">
+        <constructor>
+            <idArg column="id" javaType="java.lang.String"/>
+            <arg column="category_id" javaType="java.lang.Long"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="description" javaType="java.lang.String"/>
+            <arg column="cover_url" javaType="java.lang.String"/>
+            <arg column="result_url" javaType="java.lang.String"/>
+            <arg column="required_image_count" javaType="java.lang.Integer"/>
+            <arg column="accepted_mime_types" javaType="java.util.List"
+                 typeHandler="com.viewgene.infrastructure.persistence.typehandler.StringListJsonTypeHandler"/>
+            <arg column="max_file_size_bytes" javaType="java.lang.Long"/>
+            <arg column="enabled" javaType="java.lang.Boolean"/>
+            <arg column="sort_order" javaType="java.lang.Integer"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+            <arg column="updated_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="templateColumns">
+        mt.id, mt.category_id, mt.title, mt.description, mt.cover_url, mt.result_url,
+        mt.required_image_count, mt.accepted_mime_types, mt.max_file_size_bytes,
+        mt.enabled, mt.sort_order, mt.created_at, mt.updated_at
+    </sql>
+
+    <select id="findEnabledById" resultMap="templateResult">
+        SELECT <include refid="templateColumns"/>
+        FROM material_template mt
+        JOIN template_category tc ON tc.id = mt.category_id AND tc.enabled = 1
+        WHERE mt.id = #{id} AND mt.enabled = 1
+    </select>
+
+    <select id="findAllEnabled" resultMap="templateResult">
+        SELECT <include refid="templateColumns"/>
+        FROM material_template mt
+        JOIN template_category tc ON tc.id = mt.category_id AND tc.enabled = 1
+        WHERE mt.enabled = 1
+        ORDER BY tc.sort_order, mt.sort_order, mt.id
+    </select>
+
+    <select id="findAllEnabledByCategoryCode" resultMap="templateResult">
+        SELECT <include refid="templateColumns"/>
+        FROM material_template mt
+        JOIN template_category tc ON tc.id = mt.category_id AND tc.enabled = 1
+        WHERE mt.enabled = 1 AND tc.code = #{categoryCode}
+        ORDER BY mt.sort_order, mt.id
+    </select>
+</mapper>

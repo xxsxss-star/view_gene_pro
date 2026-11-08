@@ -1,6 +1,6 @@
 # View Gene Pro
 
-图片素材制作网站，当前完成到多阶段实施方案的阶段 1（工程骨架与基础设施）。本阶段只有最小首页、健康检查和工程配置，不包含登录、模板、上传或任务业务。
+图片素材制作网站，当前完成到多阶段实施方案的阶段 2（数据库与后端公共基础）。当前已具备工程骨架、核心表结构、种子数据、MyBatis 基础查询和统一响应/异常能力，但尚未开放登录、模板、上传或任务业务接口。
 
 ## 固定技术基线
 
@@ -26,6 +26,7 @@ frontend/             Next.js 前端
 backend/              Spring Boot 后端
 docs/ai-generated/    技术方案和实施计划
 .env.example          环境变量清单
+pom.xml               根 Maven 聚合入口（包含 backend）
 ```
 
 ## Windows 本地准备
@@ -70,7 +71,16 @@ cd backend
 .\mvnw.cmd spring-boot:run
 ```
 
-访问 `http://localhost:8080/actuator/health` 检查健康状态。应用启动时会连接 MySQL 并运行 Flyway；阶段 2 才会加入业务表迁移。
+访问 `http://localhost:8080/actuator/health` 检查健康状态。应用启动时会连接 MySQL，并由 Flyway 自动执行尚未应用的迁移。
+
+首次连接空的 `view_gene` 数据库时，Flyway 会创建六张核心表并写入两个演示用户、两个分类和三个模板。演示用户为 `demo_user`、`demo_user_b`，开发演示密码均为 `demo123`；阶段 3 才会实现登录接口。
+
+如需显式运行本机 MySQL 集成测试，请先在当前 PowerShell 设置数据库环境变量，再执行：
+
+```powershell
+$env:RUN_MYSQL_INTEGRATION_TESTS='true'
+.\mvnw.cmd '-Dtest=DatabaseFoundationIntegrationTest' test
+```
 
 ## 配置约定
 
@@ -78,6 +88,6 @@ cd backend
 
 ## 当前边界
 
-- 已完成：前后端工程入口、基础目录、构建/测试脚本、统一 API 地址、Actuator 健康端点、数据库/Flyway 配置。
-- 未完成：数据库表、认证、模板、素材上传、任务及异步执行，按阶段 2 以后实施。
+- 已完成：前后端工程入口、六张核心表、种子数据、原创演示素材、领域模型、MyBatis 基础查询、统一响应/异常、requestId 和 UTC 时间序列化。
+- 未完成：认证、业务 Controller、素材上传、任务及异步执行，按阶段 3 以后实施。
 - Docker Compose、前后端 Dockerfile 和 CI 暂缓；用户当前明确不准备 Docker，最终交付在阶段 10 补齐。
