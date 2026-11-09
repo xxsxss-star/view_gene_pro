@@ -144,7 +144,9 @@ $env:RUN_MYSQL_INTEGRATION_TESTS='true'
 docker compose up --build
 ```
 
-MySQL 健康检查通过后，Compose 会依次启动后端和前端。访问 `http://localhost:3000`，使用 `demo_user / demo123` 或 `demo_user_b / demo123` 登录。后端健康检查地址为 `http://localhost:8080/actuator/health`。
+MySQL 健康检查通过后，Compose 会依次启动后端、前端和 Nginx 网关。访问 `http://localhost`，使用 `demo_user / demo123` 或 `demo_user_b / demo123` 登录。后端健康检查统一通过 Nginx 入口 `http://localhost/actuator/health` 访问。
+
+Compose 构建时默认将前端 API 地址设置为相对路径 `/api/v1`。Nginx 将 `/api/**`、`/images/**` 和 `/actuator/**` 转发到后端，其余请求转发到前端，因此浏览器始终使用同一域名和端口访问页面与 API，无需硬编码服务器 IP，也不会产生跨域请求。开发环境直接运行前后端时仍可通过 `NEXT_PUBLIC_API_BASE_URL` 指定后端地址。
 
 数据库文件和上传素材分别保存在 `mysql-data`、`uploaded-assets` 命名卷中，普通停止和重启不会丢失：
 

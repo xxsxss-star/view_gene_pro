@@ -6,7 +6,12 @@ export const apiBaseUrl =
 export function resolveApiAssetUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
   try {
-    return new URL(path, new URL(apiBaseUrl).origin).toString();
+    const origin = /^https?:\/\//.test(apiBaseUrl)
+      ? new URL(apiBaseUrl).origin
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost";
+    return new URL(path, origin).toString();
   } catch {
     return path;
   }
