@@ -136,6 +136,27 @@ $env:RUN_MYSQL_INTEGRATION_TESTS='true'
 
 完整键清单见 [`.env.example`](./.env.example)。Spring Boot 支持环境变量覆盖数据库、JWT、上传目录及模拟任务配置。仓库只包含开发默认值和占位密钥，不包含真实凭据。
 
+## Docker Compose 一键启动
+
+已安装 Docker Desktop（含 Docker Compose v2）时，在仓库根目录执行：
+
+```powershell
+docker compose up --build
+```
+
+MySQL 健康检查通过后，Compose 会依次启动后端和前端。访问 `http://localhost:3000`，使用 `demo_user / demo123` 或 `demo_user_b / demo123` 登录。后端健康检查地址为 `http://localhost:8080/actuator/health`。
+
+数据库文件和上传素材分别保存在 `mysql-data`、`uploaded-assets` 命名卷中，普通停止和重启不会丢失：
+
+```powershell
+docker compose down
+docker compose up --build -d
+docker compose ps
+docker compose logs -f
+```
+
+需要重置全部演示数据时才执行 `docker compose down -v`；该命令会删除数据库和上传文件。可通过根目录 `.env` 覆盖 `COMPOSE_DB_PASSWORD`、`COMPOSE_MYSQL_ROOT_PASSWORD`、`COMPOSE_JWT_SECRET` 及模拟阶段配置，交付仓库不应包含真实凭据。
+
 ## 持续集成
 
 GitHub Actions 工作流位于 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)，在每次 push 和 pull request 时自动执行：
@@ -143,10 +164,11 @@ GitHub Actions 工作流位于 [`.github/workflows/ci.yml`](./.github/workflows/
 - 前端依赖安装、ESLint、TypeScript 类型检查、Vitest 测试和 Next.js 构建；
 - 后端 Java 17 环境下的 Maven 测试与构建；
 - 使用临时 MySQL 8.4 服务执行 Flyway、种子数据和 MyBatis 集成测试。
+- 校验并构建 Compose 镜像，实际启动三个服务后检查前端首页和后端健康接口。
 
 CI 使用的数据库和密码仅存在于一次性运行环境中，不用于本地或生产环境。
 
 ## 当前边界
 
-- 已完成：工程入口、数据库公共基础、登录认证、模板浏览、图片上传、任务受理与查询、三阶段异步执行、多任务轮询、刷新恢复、关键自动化测试和 GitHub Actions CI。
-- 未完成：Docker Compose、前后端 Dockerfile，以及最终部署与回滚说明。
+- 已完成：工程入口、数据库公共基础、登录认证、模板浏览、图片上传、任务受理与查询、三阶段异步执行、多任务轮询、刷新恢复、关键自动化测试、GitHub Actions CI 和 Docker Compose 交付配置。
+- 未完成：最终部署与回滚说明。
