@@ -138,17 +138,39 @@ $env:RUN_MYSQL_INTEGRATION_TESTS='true'
 
 ## Docker Compose 一键启动
 
-已安装 Docker Desktop（含 Docker Compose v2）时，在仓库根目录执行：
+已安装 Docker 和 Docker Compose v2 时，在仓库根目录执行：
 
 ```powershell
 docker compose up --build
 ```
 
+Linux 服务器推荐使用后台方式启动：
+
+```bash
+git clone https://github.com/xxsxss-star/view_gene_pro.git
+cd view_gene_pro
+cp .env.example .env
+docker compose --progress plain up --build -d
+docker compose ps
+```
+
+部署完成后通过 Nginx 的 80 端口访问。例如服务器地址为 `192.168.35.138` 时，登录页为 `http://192.168.35.138/login`，不需要访问前端容器的 3000 端口。
+
 MySQL 健康检查通过后，Compose 会依次启动后端、前端和 Nginx 网关。访问 `http://localhost`，使用 `demo_user / demo123` 或 `demo_user_b / demo123` 登录。后端健康检查统一通过 Nginx 入口 `http://localhost/actuator/health` 访问。
 
 Compose 构建时默认将前端 API 地址设置为相对路径 `/api/v1`。Nginx 将 `/api/**`、`/images/**` 和 `/actuator/**` 转发到后端，其余请求转发到前端，因此浏览器始终使用同一域名和端口访问页面与 API，无需硬编码服务器 IP，也不会产生跨域请求。开发环境直接运行前后端时仍可通过 `NEXT_PUBLIC_API_BASE_URL` 指定后端地址。
 
-默认从 Docker Hub 拉取基础镜像。如果部署服务器无法访问 Docker Hub，可在服务器根目录 `.env` 中设置镜像代理前缀，例如 `DOCKER_REGISTRY=docker.1ms.run/`。该变量同时作用于 MySQL、Nginx、Node.js 和 Java 基础镜像；GitHub Actions 未设置时仍使用 Docker Hub。
+默认从 Docker Hub 拉取基础镜像。如果部署服务器无法访问 Docker Hub，可在服务器根目录 `.env` 中设置镜像代理前缀，例如 `DOCKER_REGISTRY=docker.1ms.run/`。该变量同时作用于 MySQL、Nginx、Node.js 和 Java 基础镜像；GitHub Actions 未设置时仍使用 Docker Hub。不同代理对不同镜像的速度可能有差异，首次构建耗时较长时可再次执行相同命令复用 BuildKit 缓存。
+
+前端 Docker 镜像构建时使用 `https://registry.npmmirror.com` 安装依赖，并关闭不影响交付的 audit 和 fund 请求，以减少国内服务器执行 `npm ci` 时的网络失败。后端 Docker 镜像构建使用仓库内的阿里云 Maven 镜像配置。
+
+常用检查命令：
+
+```bash
+docker compose ps
+docker compose logs -f backend
+curl http://localhost/actuator/health
+```
 
 数据库文件和上传素材分别保存在 `mysql-data`、`uploaded-assets` 命名卷中，普通停止和重启不会丢失：
 
@@ -175,4 +197,5 @@ CI 使用的数据库和密码仅存在于一次性运行环境中，不用于�
 ## 当前边界
 
 - 已完成：工程入口、数据库公共基础、登录认证、模板浏览、图片上传、任务受理与查询、三阶段异步执行、多任务轮询、刷新恢复、关键自动化测试、GitHub Actions CI 和 Docker Compose 交付配置。
-- 未完成：最终部署与回滚说明。
+- 已在 Ubuntu Linux 环境验证 Docker Compose 构建、启动、Nginx 同源代理、数据库迁移和主机浏览器访问。
+- 生产环境仍需补充 HTTPS、正式域名、真实密钥管理、监控告警及自动化回滚策略。

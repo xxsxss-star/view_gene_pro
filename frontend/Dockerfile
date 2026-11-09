@@ -4,7 +4,8 @@ FROM ${DOCKER_REGISTRY}node:24-alpine AS dependencies
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm ci --no-audit --no-fund
 
 FROM ${DOCKER_REGISTRY}node:24-alpine AS builder
 
