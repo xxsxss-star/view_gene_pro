@@ -5,9 +5,9 @@ FROM ${DOCKER_REGISTRY}eclipse-temurin:17-jdk AS builder
 WORKDIR /app
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw --batch-mode dependency:go-offline
+RUN chmod +x mvnw && ./mvnw --settings .mvn/settings.xml --batch-mode dependency:go-offline
 COPY src src
-RUN ./mvnw --batch-mode clean package -DskipTests
+RUN ./mvnw --settings .mvn/settings.xml --batch-mode clean package -DskipTests
 
 FROM ${DOCKER_REGISTRY}eclipse-temurin:17-jre AS runtime
 
