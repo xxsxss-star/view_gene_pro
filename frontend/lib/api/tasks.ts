@@ -32,9 +32,9 @@ export async function createTask(templateId: string, assetIds: number[]): Promis
   })).data;
 }
 
-export async function getTasks(status?: TaskStatus): Promise<Task[]> {
+export async function getTasks(status?: TaskStatus, signal?: AbortSignal): Promise<Task[]> {
   const query = status ? `?status=${status}` : "";
-  return (await apiRequest<Envelope<Task[]>>(`/tasks${query}`)).data;
+  return (await apiRequest<Envelope<Task[]>>(`/tasks${query}`, { signal })).data;
 }
 
 export async function getTask(taskId: number): Promise<Task> {
