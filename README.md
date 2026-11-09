@@ -136,8 +136,17 @@ $env:RUN_MYSQL_INTEGRATION_TESTS='true'
 
 完整键清单见 [`.env.example`](./.env.example)。Spring Boot 支持环境变量覆盖数据库、JWT、上传目录及模拟任务配置。仓库只包含开发默认值和占位密钥，不包含真实凭据。
 
+## 持续集成
+
+GitHub Actions 工作流位于 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)，在每次 push 和 pull request 时自动执行：
+
+- 前端依赖安装、ESLint、TypeScript 类型检查、Vitest 测试和 Next.js 构建；
+- 后端 Java 17 环境下的 Maven 测试与构建；
+- 使用临时 MySQL 8.4 服务执行 Flyway、种子数据和 MyBatis 集成测试。
+
+CI 使用的数据库和密码仅存在于一次性运行环境中，不用于本地或生产环境。
+
 ## 当前边界
 
-- 已完成：阶段 1～8，包括工程入口、数据库公共基础、登录认证、模板浏览、图片上传、任务受理与查询、三阶段异步执行、多任务轮询和刷新恢复。
-- 未完成：测试可靠性加固与最终交付能力，按阶段 9 以后实施。
-- Docker Compose、前后端 Dockerfile 和 CI 暂缓；用户当前明确不准备 Docker，最终交付在阶段 10 补齐。
+- 已完成：工程入口、数据库公共基础、登录认证、模板浏览、图片上传、任务受理与查询、三阶段异步执行、多任务轮询、刷新恢复、关键自动化测试和 GitHub Actions CI。
+- 未完成：Docker Compose、前后端 Dockerfile，以及最终部署与回滚说明。
