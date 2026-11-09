@@ -148,6 +148,8 @@ MySQL 健康检查通过后，Compose 会依次启动后端、前端和 Nginx �
 
 Compose 构建时默认将前端 API 地址设置为相对路径 `/api/v1`。Nginx 将 `/api/**`、`/images/**` 和 `/actuator/**` 转发到后端，其余请求转发到前端，因此浏览器始终使用同一域名和端口访问页面与 API，无需硬编码服务器 IP，也不会产生跨域请求。开发环境直接运行前后端时仍可通过 `NEXT_PUBLIC_API_BASE_URL` 指定后端地址。
 
+默认从 Docker Hub 拉取基础镜像。如果部署服务器无法访问 Docker Hub，可在服务器根目录 `.env` 中设置镜像代理前缀，例如 `DOCKER_REGISTRY=docker.1ms.run/`。该变量同时作用于 MySQL、Nginx、Node.js 和 Java 基础镜像；GitHub Actions 未设置时仍使用 Docker Hub。
+
 数据库文件和上传素材分别保存在 `mysql-data`、`uploaded-assets` 命名卷中，普通停止和重启不会丢失：
 
 ```powershell

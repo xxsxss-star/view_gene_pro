@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.4
+    image: ${DOCKER_REGISTRY:-}mysql:8.4
     environment:
       MYSQL_DATABASE: view_gene
       MYSQL_USER: view_gene
@@ -19,6 +19,8 @@ services:
   backend:
     build:
       context: ./backend
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
     environment:
       DB_URL: jdbc:mysql://mysql:3306/view_gene?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
       DB_USERNAME: view_gene
@@ -40,13 +42,14 @@ services:
     build:
       context: ./frontend
       args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api/v1}
     depends_on:
       - backend
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    image: ${DOCKER_REGISTRY:-}nginx:1.27-alpine
     ports:
       - "80:80"
     volumes:
