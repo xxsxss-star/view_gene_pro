@@ -112,8 +112,10 @@ jobs:
 
       - name: Verify backend and frontend
         run: |
-          curl --fail --retry 10 --retry-delay 3 http://localhost:8080/actuator/health
-          curl --fail --retry 10 --retry-delay 3 http://localhost:3000
+          curl --fail --show-error --retry 40 --retry-delay 3 --retry-all-errors \
+            http://localhost:8080/actuator/health
+          curl --fail --show-error --retry 40 --retry-delay 3 --retry-all-errors \
+            http://localhost:3000
 
       - name: Show container logs on failure
         if: failure()
