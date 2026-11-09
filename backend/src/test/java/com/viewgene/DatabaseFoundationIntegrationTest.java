@@ -97,11 +97,11 @@ class DatabaseFoundationIntegrationTest {
 
         assertThat(categoryMapper.findAllEnabled())
                 .extracting("code")
-                .containsExactly("TRAVEL", "SOCIAL");
+                .containsExactly("TRAVEL", "SOCIAL", "PETS", "WEDDING", "HOLIDAY", "PORTRAIT");
 
         var templates = templateMapper.findAllEnabled();
-        assertThat(templates).hasSize(3);
-        assertThat(templates).extracting("requiredImageCount").containsExactly(1, 2, 3);
+        assertThat(templates).hasSize(8);
+        assertThat(templates).extracting("requiredImageCount").contains(1, 2, 3);
         assertThat(templates.get(0).acceptedMimeTypes()).containsExactly("image/jpeg", "image/png");
         assertThat(templateMapper.findAllEnabledByCategoryCode("TRAVEL")).hasSize(2);
         assertThat(templateMapper.findEnabledById("social-story")).isPresent();
@@ -111,6 +111,6 @@ class DatabaseFoundationIntegrationTest {
     void rerunningFlywayDoesNotDuplicateSeedData() {
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM app_user", Integer.class)).isEqualTo(2);
-        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM material_template", Integer.class)).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM material_template", Integer.class)).isEqualTo(8);
     }
 }

@@ -5,7 +5,6 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { uploadAsset, UploadedAsset } from "@/lib/api/assets";
 import { ApiClientError } from "@/lib/api/client";
 import { createTask } from "@/lib/api/tasks";
-import { useRouter } from "next/navigation";
 
 type UploadStatus = "EMPTY" | "UPLOADING" | "SUCCESS" | "FAILED";
 
@@ -23,16 +22,17 @@ interface UploadSlotsProps {
   requiredImageCount: number;
   acceptedMimeTypes: string[];
   maxFileSizeBytes: number;
+  onTaskCreated?: (taskId: number) => void;
 }
 
-export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes, maxFileSizeBytes }: UploadSlotsProps) {
-  const router = useRouter();
+export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes, maxFileSizeBytes, onTaskCreated }: UploadSlotsProps) {
   const [slots, setSlots] = useState<UploadSlot[]>(() =>
     Array.from({ length: requiredImageCount }, (_, position) => ({ position, status: "EMPTY" })),
   );
   const slotsRef = useRef(slots);
   const requestVersions = useRef(Array.from({ length: requiredImageCount }, () => 0));
   const [isCreatingTask, setCreatingTask] = useState(false);
+  const [isTaskCreated, setTaskCreated] = useState(false);
   const [taskError, setTaskError] = useState("");
 
   useEffect(() => { slotsRef.current = slots; }, [slots]);
@@ -50,6 +50,7 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    setTaskCreated(false);
     const previous = slotsRef.current[position];
     if (previous.previewUrl) URL.revokeObjectURL(previous.previewUrl);
     const previewUrl = URL.createObjectURL(file);
@@ -82,6 +83,7 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
   }
 
   function remove(position: number) {
+    setTaskCreated(false);
     requestVersions.current[position]++;
     const slot = slotsRef.current[position];
     if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl);
@@ -91,13 +93,15 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
   const allSucceeded = slots.every((slot) => slot.status === "SUCCESS");
 
   async function submitTask() {
-    if (!allSucceeded || isCreatingTask) return;
+    if (!allSucceeded || isCreatingTask || isTaskCreated) return;
     setCreatingTask(true);
     setTaskError("");
     try {
       // slots 始终按 position 排列，因此 assetIds 会保持用户看到的上传位顺序。
       const task = await createTask(templateId, slots.map((slot) => slot.asset!.id));
-      router.push(`/tasks?created=${task.id}`);
+      setTaskCreated(true);
+      setCreatingTask(false);
+      onTaskCreated?.(task.id);
     } catch (error) {
       setTaskError(error instanceof ApiClientError ? error.message : "创建任务失败，请重试");
       setCreatingTask(false);
@@ -111,34 +115,43 @@ export function UploadSlots({ templateId, requiredImageCount, acceptedMimeTypes,
       <div className="upload-grid">
         {slots.map((slot) => (
           <article className={`upload-slot status-${slot.status.toLowerCase()}`} key={slot.position}>
-            <div className="slot-preview">
+            <input
+              id={`upload-slot-${templateId}-${slot.position}`}
+              className="slot-file-input"
+              type="file"
+              hidden
+              accept={acceptedMimeTypes.join(",")}
+              disabled={slot.status === "UPLOADING"}
+              aria-label={`选择第 ${slot.position + 1} 张图片`}
+              onChange={(event) => chooseFile(slot.position, event)}
+            />
+            <label
+              className="slot-preview"
+              htmlFor={`upload-slot-${templateId}-${slot.position}`}
+              aria-label={`点击上传第 ${slot.position + 1} 张图片`}
+            >
               {slot.previewUrl
                 ? <Image src={slot.previewUrl} alt={`第 ${slot.position + 1} 张图片预览`} width={480} height={320} unoptimized />
                 : <span>图片 {slot.position + 1}</span>}
               {slot.status === "UPLOADING" && <span className="uploading-label" role="status">上传中…</span>}
-            </div>
+            </label>
             {slot.asset && <p className="success-text">上传成功：{slot.asset.originalName}</p>}
             {slot.error && <p className="slot-error" role="alert">{slot.error}</p>}
+            {slot.status !== "EMPTY" && (
             <div className="slot-actions">
-              <label className="file-button">
-                {slot.status === "EMPTY" ? "选择图片" : "替换图片"}
-                <input type="file" accept={acceptedMimeTypes.join(",")} disabled={slot.status === "UPLOADING"}
-                       aria-label={`选择第 ${slot.position + 1} 张图片`} onChange={(event) => chooseFile(slot.position, event)} />
-              </label>
               {slot.status === "FAILED" && slot.file && slot.previewUrl && (
                 <button type="button" onClick={() => void startUpload(slot.position, slot.file!, slot.previewUrl!)}>重试</button>
               )}
-              {slot.status !== "EMPTY" && (
-                <button type="button" className="text-button" onClick={() => remove(slot.position)}>移除</button>
-              )}
+              <button type="button" className="text-button" onClick={() => remove(slot.position)}>移除</button>
             </div>
+            )}
           </article>
         ))}
       </div>
       {taskError && <p className="slot-error" role="alert">{taskError}</p>}
-      <button type="button" className="ready-button" disabled={!allSucceeded || isCreatingTask}
+      <button type="button" className="ready-button" disabled={!allSucceeded || isCreatingTask || isTaskCreated}
               onClick={() => void submitTask()}>
-        {isCreatingTask ? "正在创建任务…" : allSucceeded ? "创建制作任务" : `请先完成 ${requiredImageCount} 张图片上传`}
+        {isCreatingTask ? "正在创建任务…" : isTaskCreated ? "任务已创建，正在生成" : allSucceeded ? "创建制作任务" : `请先完成 ${requiredImageCount} 张图片上传`}
       </button>
     </section>
   );

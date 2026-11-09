@@ -41,13 +41,18 @@ export default function TasksPage() {
         <AppHeader />
         <main className="content">
           <section className="page-heading">
-            <p className="eyebrow">My Productions</p>
-            <h1>我的制作</h1>
-            <p>未完成任务会自动更新；全部结束后停止轮询，刷新页面也能恢复个人任务历史。</p>
-            <button type="button" className="secondary-button refresh-button"
-                    disabled={tasks.isFetching} onClick={() => void tasks.refetch()}>
-              {tasks.isFetching ? "正在刷新…" : "刷新状态"}
-            </button>
+            <div className="page-heading-copy">
+              <p className="eyebrow">Creation history</p>
+              <h1>你的创作记录</h1>
+              <p>正在处理的作品会自动刷新，完成后可直接查看生成结果。</p>
+            </div>
+            <div className="task-toolbar">
+              <Link className="secondary-button" href="/">新建创作</Link>
+              <button type="button" className="secondary-button refresh-button"
+                      disabled={tasks.isFetching} onClick={() => void tasks.refetch()}>
+                {tasks.isFetching ? "正在刷新…" : "刷新状态"}
+              </button>
+            </div>
           </section>
           {tasks.isPending && <p className="state-panel" role="status">正在加载任务…</p>}
           {tasks.isError && !tasks.data && (
@@ -68,7 +73,24 @@ export default function TasksPage() {
           {tasks.data && tasks.data.length > 0 && (
             <section className="task-list" aria-label="制作任务列表">
               {tasks.data.map((task) => (
-                <article className="task-card" key={task.id}>
+                <article
+                  className={`task-card ${task.status === "SUCCEEDED" && task.resultUrl ? "task-card-clickable" : ""}`}
+                  key={task.id}
+                  role={task.status === "SUCCEEDED" && task.resultUrl ? "link" : undefined}
+                  tabIndex={task.status === "SUCCEEDED" && task.resultUrl ? 0 : undefined}
+                  aria-label={task.status === "SUCCEEDED" && task.resultUrl ? `在新窗口查看任务 ${task.id} 的制作结果` : undefined}
+                  onClick={() => {
+                    if (task.status === "SUCCEEDED" && task.resultUrl) {
+                      window.open(resolveApiAssetUrl(task.resultUrl), "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && task.status === "SUCCEEDED" && task.resultUrl) {
+                      event.preventDefault();
+                      window.open(resolveApiAssetUrl(task.resultUrl), "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                >
                   <div className="task-visuals">
                     <figure>
                       <Image src={resolveApiAssetUrl(task.template.coverUrl)} alt={`${task.template.title}模板`}
@@ -92,10 +114,6 @@ export default function TasksPage() {
                       <p className="slot-error" role="status">
                         {task.failure.stage ? `${stageText[task.failure.stage]}：` : ""}{task.failure.message}
                       </p>
-                    )}
-                    {task.status === "SUCCEEDED" && task.resultUrl && (
-                      <a className="result-link" href={resolveApiAssetUrl(task.resultUrl)} target="_blank"
-                         rel="noreferrer">在新窗口查看结果</a>
                     )}
                   </div>
                 </article>

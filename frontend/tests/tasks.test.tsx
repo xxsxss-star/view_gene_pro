@@ -71,7 +71,7 @@ describe("task list", () => {
       "src", "http://localhost:8080/images/results/travel-result.svg",
     );
     expect(screen.getByText("当前阶段：结果整理")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "在新窗口查看结果" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "在新窗口查看任务 9002 的制作结果" })).toBeInTheDocument();
   });
 
   it("keeps the last task data when a refresh request fails", async () => {

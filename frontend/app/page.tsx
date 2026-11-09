@@ -22,14 +22,16 @@ export default function Home() {
         <AppHeader />
         <main className="content">
           <section className="page-heading">
-            <p className="eyebrow">Template Gallery</p>
-            <h1>选择制作模板</h1>
-            <p>选择模板后可查看需要上传的图片数量、格式和大小要求。</p>
+            <div className="page-heading-copy">
+              <p className="eyebrow">Creative templates</p>
+              <h1>从一个灵感开始创作</h1>
+              <p>挑选喜欢的视觉模板，上传你的图片，快速生成专属作品。</p>
+            </div>
           </section>
 
           {templates.data && (
             <div className="category-tabs" role="group" aria-label="模板分类">
-              <button className={!categoryCode ? "active" : ""} onClick={() => setCategoryCode("")}>全部</button>
+              <button className={!categoryCode ? "active" : ""} onClick={() => setCategoryCode("")}>全部作品</button>
               {templates.data.categories.map((category) => (
                 <button key={category.code} className={categoryCode === category.code ? "active" : ""}
                         onClick={() => setCategoryCode(category.code)}>{category.name}</button>
@@ -49,14 +51,14 @@ export default function Home() {
             <section className="template-grid" aria-label="模板列表">
               {templates.data.items.map((template) => (
                 <article className="template-card" key={template.id}>
-                  <Image src={resolveApiAssetUrl(template.coverUrl)} alt="" width={640} height={360} unoptimized />
+                  <Image src={resolveApiAssetUrl(template.coverUrl)} alt={template.title} width={640} height={800} unoptimized />
                   <div className="template-card-body">
                     <span className="category-label">{template.categoryName}</span>
                     <h2>{template.title}</h2>
                     <p>{template.description}</p>
                     <div className="card-footer">
-                      <span>需要 {template.requiredImageCount} 张图片</span>
-                      <Link href={`/templates/${template.id}`}>查看要求</Link>
+                      <span>{template.requiredImageCount} 张图片</span>
+                      <Link href={`/templates/${template.id}`}>立即创作</Link>
                     </div>
                   </div>
                 </article>

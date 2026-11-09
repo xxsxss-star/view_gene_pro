@@ -7,9 +7,6 @@ import * as taskApi from "@/lib/api/tasks";
 vi.mock("@/lib/api/assets", () => ({ uploadAsset: vi.fn() }));
 vi.mock("@/lib/api/tasks", () => ({ createTask: vi.fn() }));
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
 const createObjectURL = vi.fn((file: File) => `blob:${file.name}`);
 const revokeObjectURL = vi.fn();
 
@@ -20,9 +17,9 @@ function asset(id: number, name: string) {
   };
 }
 
-function renderSlots(count = 2) {
+function renderSlots(count = 2, onTaskCreated?: (taskId: number) => void) {
   return render(<UploadSlots templateId="travel-collage" requiredImageCount={count}
-    acceptedMimeTypes={["image/png"]} maxFileSizeBytes={1024} />);
+    acceptedMimeTypes={["image/png"]} maxFileSizeBytes={1024} onTaskCreated={onTaskCreated} />);
 }
 
 function png(name: string) {
@@ -32,7 +29,6 @@ function png(name: string) {
 beforeEach(() => {
   vi.mocked(assetApi.uploadAsset).mockReset();
   vi.mocked(taskApi.createTask).mockReset();
-  push.mockReset();
   createObjectURL.mockClear();
   revokeObjectURL.mockClear();
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
@@ -87,19 +83,21 @@ describe("UploadSlots", () => {
     expect(await screen.findByRole("button", { name: "创建制作任务" })).toBeEnabled();
   });
 
-  it("submits ordered asset ids once and redirects to the task list", async () => {
+  it("submits ordered asset ids once and reports the created task without leaving the page", async () => {
+    const onTaskCreated = vi.fn();
     vi.mocked(assetApi.uploadAsset)
       .mockResolvedValueOnce(asset(11, "one.png"))
       .mockResolvedValueOnce(asset(22, "two.png"));
     vi.mocked(taskApi.createTask).mockResolvedValue({
       id: 9001, status: "QUEUED", stage: null, createdAt: "2026-11-08T00:00:00Z",
     });
-    renderSlots();
+    renderSlots(2, onTaskCreated);
     fireEvent.change(screen.getByLabelText("选择第 1 张图片"), { target: { files: [png("one.png")] } });
     fireEvent.change(screen.getByLabelText("选择第 2 张图片"), { target: { files: [png("two.png")] } });
     fireEvent.click(await screen.findByRole("button", { name: "创建制作任务" }));
     await waitFor(() => expect(taskApi.createTask).toHaveBeenCalledWith("travel-collage", [11, 22]));
-    expect(push).toHaveBeenCalledWith("/tasks?created=9001");
+    expect(onTaskCreated).toHaveBeenCalledWith(9001);
+    expect(screen.getByRole("button", { name: "任务已创建，正在生成" })).toBeDisabled();
   });
 
   it("keeps uploaded assets available when task creation fails", async () => {
